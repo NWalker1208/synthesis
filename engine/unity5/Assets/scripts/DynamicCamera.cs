@@ -242,7 +242,7 @@ public class DynamicCamera : MonoBehaviour
     }
 
     //This state locates directly above the field and looks straight down on the field in order for robot positioning
-    //Not working with 2016&2017 field because they are not centered
+    //Not working well with 2016&2017 field because they are not centered
     public class OverviewState : CameraState
     {
         Vector3 positionVector;
@@ -280,7 +280,7 @@ public class DynamicCamera : MonoBehaviour
     {
         Vector3 targetPosition;
         Vector3 rotationVector;
-        GameObject target;
+        public GameObject target;
 
         public SateliteState(MonoBehaviour mono)
         {
@@ -303,7 +303,6 @@ public class DynamicCamera : MonoBehaviour
 
             }
             mono.transform.position = targetPosition + new Vector3(0f, 6f, 0f);
-            mono.transform.LookAt(targetPosition);
         }
 
         public override void End()
