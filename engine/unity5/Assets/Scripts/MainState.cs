@@ -323,6 +323,7 @@ public class MainState : SimState
         isResettingOrientation = false;
 
         Controls.LoadControls();
+        DynamicCamera.MovingEnabled = true;
     }
 
     public override void Update()
