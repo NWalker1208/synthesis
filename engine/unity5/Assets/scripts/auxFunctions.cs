@@ -4,16 +4,18 @@ using System.Collections;
 using System.Collections.Generic;
 using BulletSharp;
 using BulletUnity;
+using GopherAPI.STL;
+using GopherAPI.Nodes;
 
 public class AuxFunctions
 {
     public delegate void HandleMesh(int id, BXDAMesh.BXDASubMesh subMesh, Mesh mesh);
 
-    public static void ReadMeshSet(List<BXDAMesh.BXDASubMesh> meshes, HandleMesh handleMesh)
+    public static void ReadMeshSet(Facet[] facets, HandleMesh handleMesh)
     {
-        for (int j = 0; j < meshes.Count; j++)
+        for (int j = 0; j < facets.Length; j++)
         {
-            BXDAMesh.BXDASubMesh sub = meshes[j];
+            Facet sub = facets[j];
             //takes all of the required information from the API (the API information is within "sub" above)
             Vector3[] vertices = sub.verts == null ? null : ArrayUtilities.WrapArray<Vector3>(
                 delegate (double x, double y, double z)
@@ -239,4 +241,5 @@ public class AuxFunctions
         }
         return new GameObject("COULDNOTFIND" + name);
     }
+    
 }

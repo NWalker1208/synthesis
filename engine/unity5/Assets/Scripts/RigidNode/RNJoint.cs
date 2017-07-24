@@ -5,8 +5,9 @@ using System.Text;
 using UnityEngine;
 using BulletUnity;
 using BulletSharp;
+using GopherAPI.Nodes;
 
-public partial class RigidNode : RigidNode_Base
+public partial class RigidNode : GopherRobotNode
 {
     private const float CCD_MOTION_THRESHOLD = 5f;
     private const float CCD_SWEPT_SPHERE_RADIUS = 0.1f;

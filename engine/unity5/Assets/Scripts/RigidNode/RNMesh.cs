@@ -5,20 +5,22 @@ using System.Text;
 using UnityEngine;
 using BulletUnity;
 using BulletSharp;
+using GopherAPI.Nodes;
+using GopherAPI.STL;
 
-public partial class RigidNode : RigidNode_Base
+public partial class RigidNode : GopherRobotNode
 {
     public bool CreateMesh(string filePath)
     {
-        BXDAMesh mesh = new BXDAMesh();
-        mesh.ReadFromFile(filePath);
+        STLMesh mesh = Mesh;
+        //mesh.ReadFromFile(filePath);
 
-        if (!mesh.GUID.Equals(GUID))
-            return false;
+        //if (!mesh.GUID.Equals(GUID))
+        //    return false;
 
         List<GameObject> meshObjects = new List<GameObject>();
         
-        AuxFunctions.ReadMeshSet(mesh.meshes, delegate (int id, BXDAMesh.BXDASubMesh sub, Mesh meshu)
+        AuxFunctions.ReadMeshSet(Mesh.Facets, delegate (int id, BXDAMesh.BXDASubMesh sub, Mesh meshu)
         {
             GameObject meshObject = new GameObject(MainObject.name + "_mesh");
             meshObjects.Add(meshObject);

@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using GopherAPI.Nodes;
 
-public partial class RigidNode : RigidNode_Base
+public partial class RigidNode : GopherRobotNode
 {
     float WHEEL_MASS_SCALE = 15f;
     float WHEEL_FRICTION = 1f;

@@ -4,8 +4,10 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using BulletUnity;
+using GopherAPI.Nodes;
 
-public partial class RigidNode : RigidNode_Base
+
+public partial class RigidNode : GopherRobotNode
 {
     public GameObject MainObject { get; private set; }
     public Vector3 ComOffset { get; private set; }
