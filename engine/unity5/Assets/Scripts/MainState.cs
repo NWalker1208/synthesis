@@ -9,6 +9,8 @@ using UnityEngine.SceneManagement;
 using System.IO;
 using Assets.Scripts.FEA;
 using Assets.Scripts.FSM;
+using GopherAPI.Nodes;
+using GopherAPI;
 
 public class MainState : SimState
 {
@@ -46,7 +48,7 @@ public class MainState : SimState
     private UnityFieldDefinition fieldDefinition;
 
     private GameObject robotObject;
-    private RigidNode_Base rootNode;
+    private GopherRobot rootNode;
 
     private Vector3 robotStartPosition = new Vector3(0f, 1f, 0f);
 
@@ -447,23 +449,18 @@ public class MainState : SimState
     {
         robotObject = new GameObject("Robot");
         robotObject.transform.position = robotStartPosition;
-
-        RigidNode_Base.NODE_FACTORY = delegate (Guid guid)
-        {
-            return new RigidNode(guid);
-        };
-
-        List<RigidNode_Base> nodes = new List<RigidNode_Base>();
+        
+        List<GopherRobotNode> nodes = new List<GopherRobotNode>();
         //Read .robot instead. Maybe need a RobotSkeleton class
-        rootNode = BXDJSkeleton.ReadSkeleton(directory + "\\skeleton.bxdj");
+        rootNode = Gopher.ReadRobot(directory);
         rootNode.ListAllNodes(nodes);
 
-        foreach (RigidNode_Base n in nodes)
+        foreach (GopherRobotNode n in nodes)
         {
             RigidNode node = (RigidNode)n;
             node.CreateTransform(robotObject.transform);
 
-            if (!node.CreateMesh(directory + "\\" + node.ModelFileName))
+            if (!node.CreateMesh())
             {
                 Debug.Log("Robot not loaded!");
                 UnityEngine.Object.Destroy(robotObject);

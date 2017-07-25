@@ -16,14 +16,13 @@ public partial class RigidNode : GopherRobotNode
     private Component joint;
     private PhysicalProperties physicalProperties;
 
-    public RigidNode(Guid guid)
-        : base(guid)
+    public RigidNode()
     {
     }
 
     public void CreateTransform(Transform root)
     {
-        MainObject = new GameObject(ModelFileName);
+        MainObject = new GameObject("Robot");
         MainObject.transform.parent = root;
 
         this.root = root;

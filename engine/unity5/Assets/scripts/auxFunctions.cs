@@ -6,10 +6,11 @@ using BulletSharp;
 using BulletUnity;
 using GopherAPI.STL;
 using GopherAPI.Nodes;
+using GopherAPI.Other;
 
 public class AuxFunctions
 {
-    public delegate void HandleMesh(int id, BXDAMesh.BXDASubMesh subMesh, Mesh mesh);
+    public delegate void HandleMesh(int id, Facet subMesh, Mesh mesh);
 
     public static void ReadMeshSet(Facet[] facets, HandleMesh handleMesh)
     {
@@ -17,26 +18,26 @@ public class AuxFunctions
         {
             Facet sub = facets[j];
             //takes all of the required information from the API (the API information is within "sub" above)
-            Vector3[] vertices = sub.verts == null ? null : ArrayUtilities.WrapArray<Vector3>(
-                delegate (double x, double y, double z)
+            Vector3[] vertices = sub.Verteces == null ? null : AsVector3Array(sub.Verteces);
+
+            Vector3[] normals = new Vector3[3];
+            if(sub.Normal != null)
+            {
+                for(int i = 0; i < normals.Length; i++)
                 {
-                    return new Vector3((float)x * 0.01f, (float)y * 0.01f, (float)z * 0.01f);
-                }, sub.verts);
-            Vector3[] normals = sub.norms == null ? null : ArrayUtilities.WrapArray<Vector3>(
-                delegate (double x, double y, double z)
-                {
-                    return new Vector3((float)x, (float)y, (float)z);
-                }, sub.norms);
+                    normals[i] = AsVector3(sub.Normal);
+                }
+            }
 
             Mesh unityMesh = new Mesh();
             unityMesh.vertices = vertices;
             unityMesh.normals = normals;
             unityMesh.uv = new Vector2[vertices.Length];
-            unityMesh.subMeshCount = sub.surfaces.Count;
-            for (int i = 0; i < sub.surfaces.Count; i++)
+            unityMesh.subMeshCount = facets.Length;
+            for (int i = 0; i < facets.Length; i++)
             {
-                int[] cpy = new int[sub.surfaces[i].indicies.Length];
-                Array.Copy(sub.surfaces[i].indicies, cpy, cpy.Length);
+                int[] cpy = { i, i + 1, i + 2 };
+                
                 //Array.Reverse(cpy); <-- don't uncomment this.
                 unityMesh.SetTriangles(cpy, i);
             }
@@ -78,10 +79,10 @@ public class AuxFunctions
         List<BXDAMesh.BXDASubMesh> combinedMeshes = new List<BXDAMesh.BXDASubMesh>();
         combinedMeshes.Add(combinedMesh);
 
-        ReadMeshSet(combinedMeshes, delegate (int id, BXDAMesh.BXDASubMesh subMesh, Mesh mesh)
-        {
-            handleMesh(id, subMesh, mesh);
-        });
+        //ReadMeshSet(combinedMeshes, delegate (int id, BXDAMesh.BXDASubMesh subMesh, Mesh mesh)
+        //{
+        //    handleMesh(id, subMesh, mesh);
+        //});
     }
 
     /// <summary>
@@ -241,5 +242,51 @@ public class AuxFunctions
         }
         return new GameObject("COULDNOTFIND" + name);
     }
-    
+
+    public static Vector3 AsVector3(Vec3 v)
+    {
+        return new Vector3(v.X * 0.01f, v.Y * 0.01f, v.Z * 0.01f);
+    }
+
+    public static Vec3 AsVec3(Vector3 v)
+    {
+        return new Vec3(v.x / 0.01f, v.y / 0.01f, v.z / 0.01f);
+    }
+
+    public static Vector3[] AsVector3Array(Vec3[] vArray)
+    {
+        Vector3[] newArray = new Vector3[3];
+        for(int i = 0; i < newArray.Length; i++)
+        {
+            newArray[i] = AsVector3(vArray[i]);
+        }
+        return newArray;
+    }
+
+    public static Material AsMaterial(Facet surf, bool emissive = false)
+    {
+        
+        Color color = new Color32((byte)((surf.FacetColor.R >> 8) & 0xFF), (byte)((surf.FacetColor.G >> 8) & 0xFF), (byte)((surf.FacetColor.B >> 16) & 0xFF), (byte)((surf.FacetColor.A >> 24) & 0xFF));
+        //if (surf.transparency != 0)
+        //    color.a = surf.transparency;
+        //else if (surf.translucency != 0)
+        //    color.a = surf.translucency;
+        if (color.a == 0)   // No perfectly transparent things plz.
+            color.a = 1;
+        Material result = new Material(Shader.Find(emissive ? "Standard" : (color.a != 1 ? "Transparent/" : "") +  "Specular"));
+        result.SetColor("_Color", color);
+        //if (surf.specular > 0)
+        //{
+        //    result.SetFloat("_Shininess", surf.specular);
+        //    result.SetColor("_SpecColor", color);
+        //}
+
+        if (emissive)
+        {
+            result.EnableKeyword("_EMISSION");
+            result.SetColor("_EmissionColor", Color.black);
+        }
+
+        return result;
+    }
 }
