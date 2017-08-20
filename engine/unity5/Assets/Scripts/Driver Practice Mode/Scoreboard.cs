@@ -34,7 +34,7 @@ public struct ScoreEvent
     /// <returns>A line of CSV.</returns>
     public string ToCSV()
     {
-        return timeStamp.ToString() + "," + pointValue.ToString() + "," + description.ToString();
+        return timeStamp.ToString() + ",\"" + description.ToString() + "\"," + pointValue.ToString();
     }
 }
 
@@ -171,34 +171,47 @@ public class Scoreboard : MonoBehaviour
     /// <param name="filePath">Path to the save file</param>
     public void Save(string filePath)
     {
+        bool newFile = !File.Exists(filePath);
+        
         Debug.Log("Saving to " + filePath);
         using (StreamWriter writer = new StreamWriter(filePath, true))
         {
+            if (newFile)
+                writer.WriteLine("\"Time\",\"Event Type\",\"Details\"");
+
+            writer.WriteLine("0,\"New Session\"");
+
             string fieldName = new DirectoryInfo(PlayerPrefs.GetString("simSelectedField")).Name;
-            writer.WriteLine("Field: " + fieldName);
+            writer.WriteLine("0,\"Field\",\"" + fieldName + "\"");
+
+            string robotName = new DirectoryInfo(PlayerPrefs.GetString("simSelectedRobot")).Name;
+            writer.WriteLine("0,\"Robot\",\"" + robotName + "\"");
 
             bool lastEventGameStarted = false;
+            float lastTime = 0;
 
             for (int i = 0; i < scoreEvents.Count; i++)
             {
                 if (scoreEvents[i].timeStamp > 0 && !lastEventGameStarted)
                 {
-                    writer.WriteLine("Game Start");
+                    writer.WriteLine("0,\"Game Start\"");
                     lastEventGameStarted = true;
                 }
                 else if (scoreEvents[i].timeStamp < 0 && lastEventGameStarted)
                 {
-                    writer.WriteLine("Game End");
+                    writer.WriteLine(lastTime.ToString() + ",\"Game End\"");
                     lastEventGameStarted = false;
                 }
-
+				
                 writer.WriteLine(scoreEvents[i].ToCSV());
+                lastTime = scoreEvents[i].timeStamp;
             }
 
             if (lastEventGameStarted)
-                writer.WriteLine("Game End");
+                writer.WriteLine(lastTime.ToString() + ",\"Game End\"");
 
-            writer.WriteLine("Total Score: " + GetScoreTotal().ToString());
+            writer.WriteLine(lastTime.ToString() + ",\"Total Score\"," + GetScoreTotal().ToString());
+            writer.WriteLine(lastTime.ToString() + ",\"End Session\"");
 
             writer.Close();
         }

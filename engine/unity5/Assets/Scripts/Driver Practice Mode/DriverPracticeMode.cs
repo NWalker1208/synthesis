@@ -454,7 +454,7 @@ public class DriverPracticeMode : MonoBehaviour {
             gameEnded = true;
             SetGameDisplayColors(timerEndColor, scoreInactiveColor);
         }
-        else UserMessageManager.Dispatch("A game has not been started.", 5);
+        else Debug.Log("A game has not been started.");
     }
 
     /// <summary>
@@ -863,8 +863,9 @@ public class DriverPracticeMode : MonoBehaviour {
             CancelDefineRelease();
             CancelGamepieceSpawn();
             CancelGamepieceGoal();
-            StopGame();
         }
+        if (gameStarted)
+            StopGame();
     }
 
     public void ChangeActiveRobot(int index)
