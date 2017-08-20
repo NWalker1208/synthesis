@@ -32,7 +32,7 @@ public struct ScoreEvent
     /// Convert the score event into a string that can be used as a line in a CSV file.
     /// </summary>
     /// <returns>A line of CSV.</returns>
-    public string ScoreEventToCSV()
+    public string ToCSV()
     {
         return timeStamp.ToString() + "," + pointValue.ToString() + "," + description.ToString();
     }
@@ -50,8 +50,6 @@ public class Scoreboard : MonoBehaviour
 
     Text scoreDisplay;
     Text scoreLog;
-
-    InputField setFileName;
 
     Scrollbar scoreLogScrollbar;
     GameplayTimer timer;
@@ -81,8 +79,6 @@ public class Scoreboard : MonoBehaviour
     void FindElements()
     {
         canvas = GameObject.Find("Canvas");
-
-        setFileName = GameObject.Find("FileNameInput").GetComponent<InputField>();
 
         scoreWindow = AuxFunctions.FindObject(canvas, "ScorePanel");
         scoreLogWindow = AuxFunctions.FindObject(canvas, "ScoreLogPanel");
@@ -168,69 +164,15 @@ public class Scoreboard : MonoBehaviour
         if (scoreLogScrollbar != null)
             scoreLogScrollbar.value = 0;
     }
-
-    string setName;
-    public void SaveButtonClicked()
-    {
-        setName = setFileName.text;
-        Debug.Log(setFileName.text);
-        if (!Directory.Exists(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments) + "//synthesis//GameSaves")) ;
-        {
-            //if it doesn't, create it
-            Directory.CreateDirectory(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments) + "//synthesis//GameSaves");
-
-        }
-        Save((System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments) + "//synthesis//GameSaves//"), setName + ".txt");
-    }
+    
     /// <summary>
-    /// Saves the scoring events of the current game to a text file.
+    /// Saves the scoring events of the current game to a CSV file.
     /// </summary>
-    public void Save(string filePath, string fileName)
+    /// <param name="filePath">Path to the save file</param>
+    public void Save(string filePath)
     {
-        if (File.Exists(filePath + fileName))
-        {
-            Debug.Log("Overriding existing file");
-            File.Delete(filePath + fileName);
-        }
-        Debug.Log("Saving to " + filePath + fileName);
-        using (StreamWriter writer = new StreamWriter(filePath + fileName, false))
-        {
-            string fieldName = new DirectoryInfo(PlayerPrefs.GetString("simSelectedField")).Name;
-            writer.WriteLine("Field: " + fieldName);
-
-            bool lastEventGameStarted = false;
-
-            for (int i = 0; i < scoreEvents.Count; i++)
-            {
-                if (scoreEvents[i].timeStamp > 0 && !lastEventGameStarted)
-                {
-                    writer.WriteLine("Game Start");
-                    lastEventGameStarted = true;
-                }
-                else if (scoreEvents[i].timeStamp < 0 && lastEventGameStarted)
-                {
-                    writer.WriteLine("Game End");
-                    lastEventGameStarted = false;
-                }
-
-                writer.WriteLine(scoreEvents[i].ToHumanReadable());
-            }
-
-            if (lastEventGameStarted)
-                writer.WriteLine("Game End");
-
-            writer.WriteLine("Total Score: " + GetScoreTotal().ToString());
-
-            writer.Close();
-        }
-
-        Debug.Log("Save successful!");
-    }
-    public void quickSave(string filePath)
-    {
-       
         Debug.Log("Saving to " + filePath);
-        using (StreamWriter writer = new StreamWriter(filePath, false))
+        using (StreamWriter writer = new StreamWriter(filePath, true))
         {
             string fieldName = new DirectoryInfo(PlayerPrefs.GetString("simSelectedField")).Name;
             writer.WriteLine("Field: " + fieldName);
@@ -250,7 +192,7 @@ public class Scoreboard : MonoBehaviour
                     lastEventGameStarted = false;
                 }
 
-                writer.WriteLine(scoreEvents[i].ToHumanReadable());
+                writer.WriteLine(scoreEvents[i].ToCSV());
             }
 
             if (lastEventGameStarted)
@@ -263,5 +205,4 @@ public class Scoreboard : MonoBehaviour
 
         Debug.Log("Save successful!");
     }
-
 }

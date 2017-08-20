@@ -18,11 +18,8 @@ public class DriverPracticeMode : MonoBehaviour {
     MainState main;
 
     GameObject canvas;
-
-    GameObject saveListPanel;
-    GameObject setSavePanel;
-    GameObject createSavePanel;
-    GameObject saveGamePanel;
+    
+    GameObject saveGameWindow;
 
     GameObject dpmWindow;
     GameObject scoreWindow;
@@ -84,6 +81,9 @@ public class DriverPracticeMode : MonoBehaviour {
 
     GameObject lockPanel;
 
+    static string defaultSaveLocation = System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments) +
+                                        "\\Synthesis\\GameSaves\\stats.csv";
+
     public bool dpmWindowOn = false; //if the driver practice mode window is active
     public bool gameStarted = false; //if a game has started
     public bool gameEnded = false; //if the game started has ended
@@ -104,9 +104,6 @@ public class DriverPracticeMode : MonoBehaviour {
     private float deltaReleaseSpeed;
     private float deltaReleaseHorizontal;
     private float deltaReleaseVertical;
-
-    string chosenSave; 
-    string directory;
 
     private int settingControl = 0; //0 if false, 1 if intake, 2 if release, 3 if spawn
 
@@ -153,11 +150,7 @@ public class DriverPracticeMode : MonoBehaviour {
         timerWindow = AuxFunctions.FindObject(canvas, "GameplayTimerPanel");
         configWindow = AuxFunctions.FindObject(canvas, "ConfigurationPanel");
         goalConfigWindow = AuxFunctions.FindObject(canvas, "GoalConfigPanel");
-
-        setSavePanel = AuxFunctions.FindObject(canvas, "SetSavePanel");
-        saveGamePanel = AuxFunctions.FindObject(canvas, "SaveGamePanel");
-        createSavePanel = AuxFunctions.FindObject(canvas, "CreateSavePanel");
-        saveListPanel = AuxFunctions.FindObject(canvas, "SaveListPanel");
+        saveGameWindow = AuxFunctions.FindObject(canvas, "SaveGamePanel");
 
         timerBackground = AuxFunctions.FindObject(timerWindow, "TimerTextField").GetComponent<Image>();
         scoreBackground = AuxFunctions.FindObject(scoreWindow, "Score").GetComponent<Image>();
@@ -401,45 +394,6 @@ public class DriverPracticeMode : MonoBehaviour {
     /// <summary>
     /// Sets the driver practice mode to either be enabled or disabled, depending on what state it was at before.
     /// </summary>
-    /// 
-    public void ToggleSaveGamePanel()
-    {
-        if (saveGamePanel.activeSelf)
-        {
-            saveGamePanel.SetActive(false);
-        }
-        else
-        {
-            simUI.EndOtherProcesses();
-            saveGamePanel.SetActive(true);
-        }
-    }
-
-    public void ToggleSetSavePanel()
-    {
-        if (setSavePanel.activeSelf)
-        {
-            setSavePanel.SetActive(false);
-        }
-        else
-        {
-            simUI.EndOtherProcesses();
-            setSavePanel.SetActive(true);
-        }
-    }
-    public void ToggleCreateSavePanel()
-    {
-        if (createSavePanel.activeSelf)
-        {
-            createSavePanel.SetActive(false);
-        }
-        else
-        {
-            simUI.EndOtherProcesses();
-            createSavePanel.SetActive(true);
-        }
-    }
-
     public void DPMToggle()
     {
         if (!dpmRobot.modeEnabled)
@@ -466,24 +420,6 @@ public class DriverPracticeMode : MonoBehaviour {
                 StopGame();
             }
 
-        }
-    }
-   
-    void ChangeSave()
-    {
-        chosenSave = saveListPanel.GetComponent<SelectSaveScrollable>().selectedEntry;
-        directory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments) + "//synthesis//GameSaves//" + chosenSave;
-        if (directory != null)
-        {
-            setSavePanel.SetActive(false);
-            PlayerPrefs.SetString("simSelectedSave", directory);
-            //currentSaveFileText.text = directory;
-            currentSaveFileText.text = directory;
-            //UserMessageManager.Dispatch("Changed Save File to: " + directory, 5);
-        }
-        else
-        {
-            UserMessageManager.Dispatch("Cannot Save To:" + directory, 5);
         }
     }
 
@@ -535,16 +471,71 @@ public class DriverPracticeMode : MonoBehaviour {
     }
 
     /// <summary>
+    /// Open the save game window if closed, and close if opened.
+    /// </summary>
+    public void ToggleSaveGameWindow()
+    {
+        if (saveGameWindow.activeSelf)
+        {
+            saveGameWindow.SetActive(false);
+        }
+        else
+        {
+            saveGameWindow.SetActive(true);
+            currentSaveFileText.text = PlayerPrefs.GetString("gameStatSaveFile", defaultSaveLocation);
+        }
+    }
+
+    /// <summary>
+    /// Allow the user to select a new save file location.
+    /// </summary>
+    public void ChangeSaveLocation()
+    {
+        string oldDirectory = PlayerPrefs.GetString("gameStatSaveFile", defaultSaveLocation);
+        
+        try // Check if the known save location is a valid directory
+        {
+            Path.GetFullPath(oldDirectory);
+        }
+        catch
+        {
+            oldDirectory = defaultSaveLocation;
+        }
+
+        string oldName = Path.GetFileName(oldDirectory);
+        oldDirectory = Path.GetDirectoryName(oldDirectory);
+
+        string newDirectory = EditorUtility.SaveFilePanel("Choose a save file location", oldDirectory, oldName, "csv");
+
+        if (newDirectory != null)
+        {
+            if (newDirectory != "")
+            {
+                PlayerPrefs.SetString("gameStatSaveFile", newDirectory);
+                currentSaveFileText.text = newDirectory;
+                UserMessageManager.Dispatch("Changed save location to " + newDirectory, 10);
+            }
+        }
+        else
+        {
+            UserMessageManager.Dispatch("Cannot save to " + newDirectory, 10);
+        }
+    }
+
+    /// <summary>
     /// Save the log of the current game to a text file.
     /// </summary>
     public void SaveGameStats()
     {
         if (dpmRobot.modeEnabled)
         {
-            // This should be changed to defaut to file set in user preferences.
+            string currentDirectory = PlayerPrefs.GetString("gameStatSaveFile", defaultSaveLocation);
 
-            scoreboard.quickSave(directory);
-            // UserMessageManager.Dispatch("Saved to " + filePath, 10);
+            scoreboard.Save(currentDirectory);
+            UserMessageManager.Dispatch("Saved to " + currentDirectory, 10);
+
+            if (saveGameWindow.activeSelf)
+                ToggleSaveGameWindow();
         }
         else UserMessageManager.Dispatch("You must enable driver practice mode first.", 5);
     }
