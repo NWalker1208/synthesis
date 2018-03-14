@@ -6,13 +6,13 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Analytics;
 
 namespace Assets.Scripts.FEA
 {
     public class SaveReplayState : SimState
     {
         string fieldPath;
-        string robotPath;
 
         List<Tracker> trackers;
         List<List<ContactDescriptor>> contacts;
@@ -27,10 +27,9 @@ namespace Assets.Scripts.FEA
         /// </summary>
         /// <param name="trackers"></param>
         /// <param name="contacts"></param>
-        public SaveReplayState(string fieldPath, string robotPath, List<Tracker> trackers, List<List<ContactDescriptor>> contacts)
+        public SaveReplayState(string fieldPath, List<Tracker> trackers, List<List<ContactDescriptor>> contacts)
         {
             this.fieldPath = fieldPath;
-            this.robotPath = robotPath;
             this.trackers = trackers;
             this.contacts = contacts;
         }
@@ -40,13 +39,15 @@ namespace Assets.Scripts.FEA
         /// </summary>
         public override void Start()
         {
-            canvas = Resources.FindObjectsOfTypeAll<GameObject>().Where(x => x.name.Equals("SaveReplayCanvas")).First();
-            canvas.SetActive(true);
+            //canvas = Resources.FindObjectsOfTypeAll<GameObject>().Where(x => x.name.Equals("SaveReplayCanvas")).First();
+            //canvas.SetActive(true);
 
             saveButton = GameObject.Find("SaveButton").GetComponent<Button>();
+            saveButton.onClick.RemoveAllListeners();
             saveButton.onClick.AddListener(Save);
 
             cancelButton = GameObject.Find("CancelButton").GetComponent<Button>();
+            cancelButton.onClick.RemoveAllListeners();
             cancelButton.onClick.AddListener(Cancel);
 
             replayNameText = GameObject.Find("ReplayNameText").GetComponent<Text>();
@@ -67,7 +68,7 @@ namespace Assets.Scripts.FEA
         /// </summary>
         public override void End()
         {
-            canvas.SetActive(false);
+            //canvas.SetActive(false);
             DynamicCamera.MovingEnabled = true;
         }
 
@@ -82,8 +83,15 @@ namespace Assets.Scripts.FEA
                 return;
             }
 
-            ReplayExporter.Write(replayNameText.text, fieldPath, robotPath, trackers, contacts);
+            ReplayExporter.Write(replayNameText.text, fieldPath, trackers, contacts);
             StateMachine.Instance.PopState();
+
+            if (SimUI.changeAnalytics)
+            {
+                Analytics.CustomEvent("Saved Replay", new Dictionary<string, object> //for analytics tracking
+                {
+                });
+            }
         }
 
         /// <summary>

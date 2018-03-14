@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
-
+// Written by Philippe Leefsma 
+// http://adndevblog.typepad.com/manufacturing/2012/06/how-to-convert-iconbitmap-to-ipicturedisp-without-visualbasiccompatibilityvb6supporticontoipicture.html
 namespace BxDFieldExporter {
     public sealed class PictureDispConverter
     {
@@ -37,7 +38,7 @@ namespace BxDFieldExporter {
 
                 internal Icon(System.Drawing.Icon icon)
                 {
-                    this.hicon = icon.ToBitmap().GetHicon();
+                    hicon = icon.ToBitmap().GetHicon();
                 }
             }
 
@@ -52,7 +53,7 @@ namespace BxDFieldExporter {
 
                 internal Bitmap(System.Drawing.Bitmap bitmap)
                 {
-                    this.hbitmap = bitmap.GetHbitmap();
+                    hbitmap = bitmap.GetHbitmap();
                 }
             }
         }

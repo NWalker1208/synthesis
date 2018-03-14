@@ -35,19 +35,18 @@
             this.tutorialsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.robotExportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fieldExportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.jointsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.javaToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.driverstationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.simulatorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.emulatorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.synthesisButton = new System.Windows.Forms.Button();
             this.fExporterButton = new System.Windows.Forms.Button();
             this.rExporterButton = new System.Windows.Forms.Button();
             this.codeViewerButton = new System.Windows.Forms.Button();
-            this.liveUpdater = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.buildLabel = new System.Windows.Forms.Label();
-            this.synthesisBulletButton = new System.Windows.Forms.Button();
+            this.updateLabel = new System.Windows.Forms.Label();
+            this.lblCurrentExporter = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -78,9 +77,8 @@
             this.tutorialsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.robotExportToolStripMenuItem,
             this.fieldExportToolStripMenuItem,
-            this.jointsToolStripMenuItem,
-            this.javaToolStripMenuItem,
-            this.driverstationToolStripMenuItem});
+            this.simulatorToolStripMenuItem,
+            this.emulatorToolStripMenuItem});
             this.tutorialsToolStripMenuItem.Name = "tutorialsToolStripMenuItem";
             resources.ApplyResources(this.tutorialsToolStripMenuItem, "tutorialsToolStripMenuItem");
             // 
@@ -96,23 +94,17 @@
             resources.ApplyResources(this.fieldExportToolStripMenuItem, "fieldExportToolStripMenuItem");
             this.fieldExportToolStripMenuItem.Click += new System.EventHandler(this.fieldExportToolStripMenuItem_Click);
             // 
-            // jointsToolStripMenuItem
+            // simulatorToolStripMenuItem
             // 
-            this.jointsToolStripMenuItem.Name = "jointsToolStripMenuItem";
-            resources.ApplyResources(this.jointsToolStripMenuItem, "jointsToolStripMenuItem");
-            this.jointsToolStripMenuItem.Click += new System.EventHandler(this.jointsToolStripMenuItem_Click);
+            this.simulatorToolStripMenuItem.Name = "simulatorToolStripMenuItem";
+            resources.ApplyResources(this.simulatorToolStripMenuItem, "simulatorToolStripMenuItem");
+            this.simulatorToolStripMenuItem.Click += new System.EventHandler(this.jointsToolStripMenuItem_Click);
             // 
-            // javaToolStripMenuItem
+            // emulatorToolStripMenuItem
             // 
-            this.javaToolStripMenuItem.Name = "javaToolStripMenuItem";
-            resources.ApplyResources(this.javaToolStripMenuItem, "javaToolStripMenuItem");
-            this.javaToolStripMenuItem.Click += new System.EventHandler(this.javaToolStripMenuItem_Click);
-            // 
-            // driverstationToolStripMenuItem
-            // 
-            this.driverstationToolStripMenuItem.Name = "driverstationToolStripMenuItem";
-            resources.ApplyResources(this.driverstationToolStripMenuItem, "driverstationToolStripMenuItem");
-            this.driverstationToolStripMenuItem.Click += new System.EventHandler(this.driverstationToolStripMenuItem_Click);
+            this.emulatorToolStripMenuItem.Name = "emulatorToolStripMenuItem";
+            resources.ApplyResources(this.emulatorToolStripMenuItem, "emulatorToolStripMenuItem");
+            this.emulatorToolStripMenuItem.Click += new System.EventHandler(this.emulatorToolStripMenuItem_Click);
             // 
             // synthesisButton
             // 
@@ -142,12 +134,6 @@
             this.codeViewerButton.UseVisualStyleBackColor = true;
             this.codeViewerButton.Click += new System.EventHandler(this.codeViewer_Click);
             // 
-            // liveUpdater
-            // 
-            resources.ApplyResources(this.liveUpdater, "liveUpdater");
-            this.liveUpdater.BackColor = System.Drawing.Color.Transparent;
-            this.liveUpdater.Name = "liveUpdater";
-            // 
             // label3
             // 
             resources.ApplyResources(this.label3, "label3");
@@ -169,23 +155,27 @@
             this.buildLabel.BackColor = System.Drawing.Color.Transparent;
             this.buildLabel.Name = "buildLabel";
             // 
-            // synthesisBulletButton
+            // updateLabel
             // 
-            resources.ApplyResources(this.synthesisBulletButton, "synthesisBulletButton");
-            this.synthesisBulletButton.Name = "synthesisBulletButton";
-            this.synthesisBulletButton.UseVisualStyleBackColor = true;
-            this.synthesisBulletButton.Click += new System.EventHandler(this.synthesisBulletButton_Click);
+            resources.ApplyResources(this.updateLabel, "updateLabel");
+            this.updateLabel.Name = "updateLabel";
+            // 
+            // lblCurrentExporter
+            // 
+            resources.ApplyResources(this.lblCurrentExporter, "lblCurrentExporter");
+            this.lblCurrentExporter.Name = "lblCurrentExporter";
+            this.lblCurrentExporter.Click += new System.EventHandler(this.label1_Click);
             // 
             // LaunchForm
             // 
             resources.ApplyResources(this, "$this");
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.synthesisBulletButton);
+            this.Controls.Add(this.lblCurrentExporter);
+            this.Controls.Add(this.updateLabel);
             this.Controls.Add(this.buildLabel);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.liveUpdater);
             this.Controls.Add(this.codeViewerButton);
             this.Controls.Add(this.rExporterButton);
             this.Controls.Add(this.fExporterButton);
@@ -211,19 +201,18 @@
         private System.Windows.Forms.ToolStripMenuItem tutorialsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem robotExportToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem fieldExportToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem jointsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem javaToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem driverstationToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem simulatorToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem emulatorToolStripMenuItem;
         private System.Windows.Forms.Button synthesisButton;
         private System.Windows.Forms.Button fExporterButton;
         private System.Windows.Forms.Button rExporterButton;
         private System.Windows.Forms.Button codeViewerButton;
-        private System.Windows.Forms.Label liveUpdater;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label buildLabel;
-        private System.Windows.Forms.Button synthesisBulletButton;
+        private System.Windows.Forms.Label updateLabel;
+        private System.Windows.Forms.Label lblCurrentExporter;
     }
 }
 

@@ -15,7 +15,6 @@ public class ChangeFieldScrollable : ScrollablePanel
     // Use this for initialization
     protected override void Start()
     {
-
         base.Start();
         listStyle.fontSize = 14;
         highlightStyle.fontSize = 14;
@@ -25,10 +24,9 @@ public class ChangeFieldScrollable : ScrollablePanel
 
     void OnEnable()
     {
-        directory = PlayerPrefs.GetString("FieldDirectory", (System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments) + "//synthesis//fields"));
+        directory = PlayerPrefs.GetString("FieldDirectory", (System.Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "//synthesis//fields"));
         items = new List<string>();
         items.Clear();
-
     }
 
     // Update is called once per frame
@@ -47,6 +45,5 @@ public class ChangeFieldScrollable : ScrollablePanel
         position = GetComponent<RectTransform>().position;
 
         base.OnGUI();
-
     }
 }

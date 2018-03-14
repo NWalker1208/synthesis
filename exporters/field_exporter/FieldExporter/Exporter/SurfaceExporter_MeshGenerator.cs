@@ -2,10 +2,8 @@
 // #define USE_TEXTURES
 
 using Inventor;
-using System.IO;
 using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
 
 /// <summary>
 /// Exports Inventor objects into the BXDA format.  One instance per thread.
@@ -20,7 +18,7 @@ public partial class SurfaceExporter
 
         public ExportPlan(SurfaceBody b, bool bestResolution, bool separateFaces)
         {
-            this.surf = b;
+            surf = b;
             this.bestResolution = bestResolution;
             this.separateFaces = separateFaces;
         }

@@ -1,13 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using BxDFieldExporter;
 using Inventor;
 
 namespace BxDFieldExporter
@@ -16,13 +8,13 @@ namespace BxDFieldExporter
     {
         //Used to access StandardAddInServer's exposed API
         private Inventor.Application mApplication;
-        private AutomationInterface mAddInInterface;
+        private IAutomationInterface mAddInInterface;
 
         public AddAssembly()
         {
-            this.Location = new System.Drawing.Point(450, 350);
+            Location = new System.Drawing.Point(450, 350);
             InitializeComponent();
-            this.TopMost = true;
+            TopMost = true;
 
             //Used to access StandardAddInServer's exposed API
             try
@@ -45,34 +37,52 @@ namespace BxDFieldExporter
                 if (oAddIn.ClassIdString == "{E50BE244-9F7B-4B94-8F87-8224FABA8CA1}")
                 {
                     //Calls Automation property    
-                    mAddInInterface = (AutomationInterface)oAddIn.Automation;
+                    mAddInInterface = (IAutomationInterface)oAddIn.Automation;
                 }
 
             }
         }
-
+        /// <summary>
+        /// When the okay button is pressed, closes the form and adds the last selected model to the selected component
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void OKButton_OnClick(object sender, EventArgs e)
         {
-            mAddInInterface.setRunOnce(false);
-            this.Close();
+            mAddInInterface.SetDone(true);
+            StandardAddInServer.task.TrySetResult(true);
+            Close();
         }
-
+        /// <summary>
+        /// Closes the form and does not add the last selected model to the component
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void CancelButton_onClick(object sender, EventArgs e)
         {
-            mAddInInterface.setCancel(true);
-            mAddInInterface.setRunOnce(false);
-            this.Close();
+            mAddInInterface.SetCancel(true);
+            StandardAddInServer.task.TrySetResult(true);
+            Close();
         }
-
-        private void AddAssembly_Load(object sender, EventArgs e)
+        /// <summary>
+        /// Leaves the form open and adds the last selected model to the component
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ApplyButton_OnClick(object sender, EventArgs e)
         {
-
+            StandardAddInServer.task.TrySetResult(true);
         }
-
-        private void CancelButton_onClick(object sender, FormClosedEventArgs e)
+        /// <summary>
+        /// Properly closes the form so Standard Addin Server is aware of it closing
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void AddAssembly_FormClosing(object sender, FormClosingEventArgs e)
         {
-            mAddInInterface.setCancel(true);
-            mAddInInterface.setRunOnce(false);
+            mAddInInterface.SetCancel(true);
+            StandardAddInServer.task.TrySetResult(true);
         }
+
     }
 }

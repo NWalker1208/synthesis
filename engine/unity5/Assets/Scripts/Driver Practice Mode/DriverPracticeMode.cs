@@ -70,15 +70,21 @@ public class DriverPracticeMode : MonoBehaviour {
 
     bool isEditing = false;
 
+    private void Awake()
+    {
+        InitializeTrajectories();
+        StateMachine.Instance.Link<MainState>(this);
+    }
+
     private void Update()
     {
         if (mainState == null)
         {
-            mainState = GetComponent<StateMachine>().CurrentState as MainState;
+            mainState = StateMachine.Instance.FindState<MainState>();
         }
         else if (dpmRobot == null)
         {
-            dpmRobot = mainState.activeRobot.GetDriverPractice();
+            dpmRobot = mainState.ActiveRobot.GetDriverPractice();
             FindElements();
         }
         else
@@ -99,7 +105,7 @@ public class DriverPracticeMode : MonoBehaviour {
         dpmWindow = AuxFunctions.FindObject(canvas, "DPMPanel");
         configWindow = AuxFunctions.FindObject(canvas, "ConfigurationPanel");
 
-        enableDPMText = AuxFunctions.FindObject(canvas, "EnableDPMText").GetComponent<Text>();
+        //enableDPMText = AuxFunctions.FindObject(canvas, "EnableDPMText").GetComponent<Text>();
 
         primaryGamepieceText = AuxFunctions.FindObject(canvas, "PrimaryGamepieceText").GetComponent<Text>();
         secondaryGamepieceText = AuxFunctions.FindObject(canvas, "SecondaryGamepieceText").GetComponent<Text>();
@@ -130,8 +136,6 @@ public class DriverPracticeMode : MonoBehaviour {
 
         primaryCountText = AuxFunctions.FindObject(canvas, "PrimaryCountText").GetComponent<Text>();
         secondaryCountText = AuxFunctions.FindObject(canvas, "SecondaryCountText").GetComponent<Text>();
-
-        lockPanel = AuxFunctions.FindObject(canvas, "DPMLockPanel");
     }
 
     /// <summary>
@@ -158,15 +162,15 @@ public class DriverPracticeMode : MonoBehaviour {
 
             if (configuringIndex == 0)
             {
-                intakeControlText.text = InputControl.GetButton(Controls.buttons[0].pickupPrimary).ToString();
-                releaseControlText.text = InputControl.GetButton(Controls.buttons[0].releasePrimary).ToString();
-                spawnControlText.text = InputControl.GetButton(Controls.buttons[0].spawnPrimary).ToString();
+                intakeControlText.text = Controls.buttons[0].pickupPrimary.primaryInput.ToString();
+                releaseControlText.text = Controls.buttons[0].releasePrimary.primaryInput.ToString();
+                spawnControlText.text = Controls.buttons[0].spawnPrimary.primaryInput.ToString();
             }
             else
             {
-                intakeControlText.text = InputControl.GetButton(Controls.buttons[0].pickupSecondary).ToString();
-                releaseControlText.text = InputControl.GetButton(Controls.buttons[0].releaseSecondary).ToString();
-                spawnControlText.text = InputControl.GetButton(Controls.buttons[0].spawnSecondary).ToString();
+                intakeControlText.text = Controls.buttons[0].pickupSecondary.primaryInput.ToString();
+                releaseControlText.text = Controls.buttons[0].releaseSecondary.primaryInput.ToString();
+                spawnControlText.text = Controls.buttons[0].spawnSecondary.primaryInput.ToString();
             }
         }
     }
@@ -257,6 +261,7 @@ public class DriverPracticeMode : MonoBehaviour {
             }
             else
             {
+                dpmWindowOn = true;
                 defineGamepieceWindow.SetActive(false);
                 setSpawnWindow.SetActive(false);
                 defineIntakeWindow.SetActive(false);
@@ -283,33 +288,6 @@ public class DriverPracticeMode : MonoBehaviour {
             dpmWindowOn = true;
         }
         dpmWindow.SetActive(dpmWindowOn);
-    }
-
-    /// <summary>
-    /// Sets the driver practice mode to either be enabled or disabled, depending on what state it was at before.
-    /// </summary>
-    public void DPMToggle()
-    {
-        if (!dpmRobot.modeEnabled)
-        {
-            dpmRobot.modeEnabled = true;
-            enableDPMText.text = "Disable Driver Practice Mode";
-            lockPanel.SetActive(false);
-
-        }
-        else
-        {
-            if (configuring) UserMessageManager.Dispatch("You must close the configuration window first!", 5);
-            else
-            {
-                enableDPMText.text = "Enable Driver Practice Mode";
-                dpmRobot.displayTrajectories[0] = false;
-                dpmRobot.displayTrajectories[1] = false;
-                dpmRobot.modeEnabled = false;
-                lockPanel.SetActive(true);
-            }
-
-        }
     }
 
     /// <summary>
@@ -343,7 +321,7 @@ public class DriverPracticeMode : MonoBehaviour {
     {
         if (dpmRobot.modeEnabled)
         {
-            simUI.EndOtherProcesses();
+            StartNewProcess(); ;
             configuring = true;
             configuringIndex = 0;
             configHeaderText.text = "Configuration Menu - Primary Gamepiece";
@@ -361,7 +339,7 @@ public class DriverPracticeMode : MonoBehaviour {
     {
         if (dpmRobot.modeEnabled)
         {
-            simUI.EndOtherProcesses();
+            StartNewProcess();
             configuring = true;
             configuringIndex = 1;
             configHeaderText.text = "Configuration Menu - Secondary Gamepiece";
@@ -399,7 +377,7 @@ public class DriverPracticeMode : MonoBehaviour {
 
     public void DefineGamepiece()
     {
-        simUI.EndOtherProcesses();
+        StartNewProcess();
         dpmRobot.DefineGamepiece(configuringIndex);
     }
 
@@ -410,7 +388,7 @@ public class DriverPracticeMode : MonoBehaviour {
 
     public void DefineIntake()
     {
-        simUI.EndOtherProcesses();
+        StartNewProcess();
         dpmRobot.DefineIntake(configuringIndex);
     }
 
@@ -421,12 +399,12 @@ public class DriverPracticeMode : MonoBehaviour {
 
     public void HighlightIntake()
     {
-        dpmRobot.HighlightNode(dpmRobot.intakeNode[configuringIndex].name);
+        dpmRobot.HighlightNode(dpmRobot.intakeNode[configuringIndex]);
     }
 
     public void DefineRelease()
     {
-        simUI.EndOtherProcesses();
+        StartNewProcess();
         dpmRobot.DefineRelease(configuringIndex);
     }
 
@@ -437,12 +415,12 @@ public class DriverPracticeMode : MonoBehaviour {
 
     public void HighlightRelease()
     {
-        dpmRobot.HighlightNode(dpmRobot.releaseNode[configuringIndex].name);
+        dpmRobot.HighlightNode(dpmRobot.releaseNode[configuringIndex]);
     }
 
     public void SetGamepieceSpawn()
     {
-        simUI.EndOtherProcesses();
+        StartNewProcess();
         dpmRobot.StartGamepieceSpawn(configuringIndex);
     }
 
@@ -551,29 +529,29 @@ public class DriverPracticeMode : MonoBehaviour {
             return;
         }
 
-        KeyMapping[] keys = GetComponentsInChildren<KeyMapping>();
 
-        foreach (KeyMapping key in keys)
+        foreach (KeyCode vKey in System.Enum.GetValues(typeof(KeyCode)))
         {
-            if (InputControl.GetButtonDown(key))
+            if (Input.GetKeyDown(vKey))
             {
+                int index = mainState.ActiveRobot.ControlIndex;
                 if (configuringIndex == 0)
                 {
                     if (settingControl == 1)
                     {
-                        InputControl.GetButton(Controls.buttons[0].pickupPrimary);
+                        Controls.buttons[index].pickupPrimary.primaryInput = Controls.customInputFromString(vKey.ToString());
                     }
-                    else if (settingControl == 2) InputControl.GetButton(Controls.buttons[0].pickupPrimary);
-                    else InputControl.GetButton(Controls.buttons[0].spawnPrimary);
+                    else if (settingControl == 2) Controls.buttons[index].releasePrimary.primaryInput = Controls.customInputFromString(vKey.ToString());
+                    else Controls.buttons[index].spawnPrimary.primaryInput = Controls.customInputFromString(vKey.ToString());
                 }
                 else
                 {
-                    if (settingControl == 1) InputControl.GetButton(Controls.buttons[0].pickupSecondary);
-                    else if (settingControl == 2) InputControl.GetButton(Controls.buttons[0].releaseSecondary);
-                    else InputControl.GetButton(Controls.buttons[0].spawnPrimary);
+                    if (settingControl == 1) Controls.buttons[index].pickupSecondary.primaryInput = Controls.customInputFromString(vKey.ToString());
+                    else if (settingControl == 2) Controls.buttons[index].releaseSecondary.primaryInput = Controls.customInputFromString(vKey.ToString());
+                    else Controls.buttons[index].spawnSecondary.primaryInput = Controls.customInputFromString(vKey.ToString());
                 }
-                Controls.Save();
                 settingControl = 0;
+                Controls.Save();
             }
         }
     }
@@ -581,6 +559,8 @@ public class DriverPracticeMode : MonoBehaviour {
 
     public void EndProcesses()
     {
+        dpmWindowOn = false;
+        dpmWindow.SetActive(false);
         if (configuring)
         {
             CloseConfigurationWindow();
@@ -591,6 +571,15 @@ public class DriverPracticeMode : MonoBehaviour {
         }
     }
 
+    private void StartNewProcess()
+    {
+        if (configuring)
+        {
+            simUI.EndOtherProcesses();
+            configuring = true;
+        }
+    }
+
     public void ChangeActiveRobot(int index)
     {
 
@@ -598,20 +587,32 @@ public class DriverPracticeMode : MonoBehaviour {
         dpmRobot.displayTrajectories[0] = false;
         dpmRobot.displayTrajectories[1] = false;
 
-        if (newRobot.modeEnabled)
-        {
-            enableDPMText.text = "Disable Driver Practice Mode";
-            lockPanel.SetActive(false);
-
-        }
-        else
-        { 
-            enableDPMText.text = "Enable Driver Practice Mode";
-            lockPanel.SetActive(true);
-        }
-
         UpdateDPMValues();
         dpmRobot = newRobot;
 
+    }
+
+    private void InitializeTrajectories()
+    {
+        LineRenderer[] drawnTrajectory = new LineRenderer[2];
+
+        GameObject trajectory1 = new GameObject("DrawnTrajectory1");
+        GameObject trajectory2 = new GameObject("DrawnTrajectory2");
+
+        StateMachine.Instance.Link<MainState>(trajectory1);
+        StateMachine.Instance.Link<MainState>(trajectory2);
+
+        drawnTrajectory[0] = trajectory1.AddComponent<LineRenderer>();
+        drawnTrajectory[1] = trajectory2.AddComponent<LineRenderer>();
+        foreach (LineRenderer line in drawnTrajectory)
+        {
+            line.startWidth = 0.2f;
+            line.material = Resources.Load("Materials/Projection") as Material;
+            line.enabled = false;
+        }
+        drawnTrajectory[0].startColor = Color.blue;
+        drawnTrajectory[0].endColor = Color.cyan;
+        drawnTrajectory[1].startColor = Color.red;
+        drawnTrajectory[1].endColor = Color.magenta;
     }
 }

@@ -5,6 +5,8 @@ using UnityEngine.UI;
 using BulletUnity;
 using Assets.Scripts.FSM;
 using System.IO;
+using UnityEngine.SceneManagement;
+using UnityEngine.Analytics;
 
 /// <summary>
 /// SimUI serves as an interface between the Unity button UI and the various functions within the simulator.
@@ -16,39 +18,45 @@ public class SimUI : MonoBehaviour
     DynamicCamera camera;
     Toolkit toolkit;
     DriverPracticeMode dpm;
+    LocalMultiplayer multiplayer;
+    SensorManagerGUI sensorManagerGUI;
+    SensorManager sensorManager;
+    RobotCameraManager robotCameraManager;
+    RobotCameraGUI robotCameraGUI;
 
     GameObject canvas;
 
     GameObject freeroamCameraWindow;
     GameObject spawnpointWindow;
 
-    GameObject swapWindow;
-
-    GameObject wheelPanel;
-    GameObject driveBasePanel;
-    GameObject manipulatorPanel;
-
-
     GameObject changeRobotPanel;
+    GameObject robotListPanel;
     GameObject changeFieldPanel;
-    GameObject addRobotPanel;
+    GameObject multiplayerPanel;
 
     GameObject driverStationPanel;
 
     GameObject inputManagerPanel;
+    GameObject checkSavePanel;
+    GameObject unitConversionSwitch;
+    GameObject hotKeyButton;
+    GameObject hotKeyPanel;
 
-    public bool swapWindowOn = false; //if the swap window is active
-    public bool wheelPanelOn = false; //if the wheel panel is active
-    public bool driveBasePanelOn = false; //if the drive base panel is active
-    public bool manipulatorPanelOn = false; //if the manipulator panel is active
+    GameObject analyticsPanel;
+
+    GameObject mixAndMatchPanel;
+    GameObject changePanel;
+    GameObject addPanel;
+
+    GameObject toolbar;
+
+    public static bool changeAnalytics = true;
 
     GameObject exitPanel;
 
     GameObject orientWindow;
     bool isOrienting = false;
     GameObject resetDropdown;
-
-    Text cameraNodeText;
 
     GameObject loadingPanel;
 
@@ -57,17 +65,18 @@ public class SimUI : MonoBehaviour
     private bool oppositeSide = false;
 
     /// <summary>
-    /// Retreives the Main State instance which controls everything in the simulator.
+    /// Link the SimUI to main state
     /// </summary>
-    void Start()
+    private void Awake()
     {
+        StateMachine.Instance.Link<MainState>(this);
     }
 
     private void Update()
     {
         if (main == null)
         {
-            main = transform.GetComponent<StateMachine>().CurrentState as MainState;
+            main = StateMachine.Instance.FindState<MainState>();
         }
         else if (dpm == null)
         {
@@ -75,6 +84,9 @@ public class SimUI : MonoBehaviour
 
             toolkit = GetComponent<Toolkit>();
             dpm = GetComponent<DriverPracticeMode>();
+            multiplayer = GetComponent<LocalMultiplayer>();
+            sensorManagerGUI = GetComponent<SensorManagerGUI>();
+
             FindElements();
         }
         else if (camera == null)
@@ -94,8 +106,12 @@ public class SimUI : MonoBehaviour
                 }
             }
 
-        }
+            if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.H))
+            {
+                TogglePanel(toolbar);
+            }
 
+        }
     }
 
     private void OnGUI()
@@ -113,22 +129,19 @@ public class SimUI : MonoBehaviour
         freeroamCameraWindow = AuxFunctions.FindObject(canvas, "FreeroamPanel");
         spawnpointWindow = AuxFunctions.FindObject(canvas, "SpawnpointPanel");
 
-        swapWindow = AuxFunctions.FindObject(canvas, "SwapPanel");
-        wheelPanel = AuxFunctions.FindObject(canvas, "WheelPanel");
-        driveBasePanel = AuxFunctions.FindObject(canvas, "DriveBasePanel");
-        manipulatorPanel = AuxFunctions.FindObject(canvas, "ManipulatorPanel");
-
-        addRobotPanel = AuxFunctions.FindObject("MultiplayerPanel");
-
-
+        multiplayerPanel = AuxFunctions.FindObject(canvas, "MultiplayerPanel");
 
         driverStationPanel = AuxFunctions.FindObject(canvas, "DriverStationPanel");
         changeRobotPanel = AuxFunctions.FindObject(canvas, "ChangeRobotPanel");
+        robotListPanel = AuxFunctions.FindObject(changeRobotPanel, "RobotListPanel");
+
         changeFieldPanel = AuxFunctions.FindObject(canvas, "ChangeFieldPanel");
 
-        driverStationPanel = AuxFunctions.FindObject(canvas, "DriverStationPanel");
-
         inputManagerPanel = AuxFunctions.FindObject(canvas, "InputManagerPanel");
+        checkSavePanel = AuxFunctions.FindObject(canvas, "CheckSavePanel");
+        unitConversionSwitch = AuxFunctions.FindObject(canvas, "UnitConversionSwitch");
+        hotKeyPanel = AuxFunctions.FindObject(canvas, "HotKeyPanel");
+        hotKeyButton = AuxFunctions.FindObject(canvas, "DisplayHotKeyButton");
 
         orientWindow = AuxFunctions.FindObject(canvas, "OrientWindow");
         resetDropdown = GameObject.Find("Reset Robot Dropdown");
@@ -136,9 +149,19 @@ public class SimUI : MonoBehaviour
         exitPanel = AuxFunctions.FindObject(canvas, "ExitPanel");
         loadingPanel = AuxFunctions.FindObject(canvas, "LoadingPanel");
 
+        analyticsPanel = AuxFunctions.FindObject(canvas, "AnalyticsPanel");
+
+        sensorManager = GameObject.Find("SensorManager").GetComponent<SensorManager>();
+        robotCameraManager = GameObject.Find("RobotCameraList").GetComponent<RobotCameraManager>();
+        robotCameraGUI = GameObject.Find("StateMachine").GetComponent<RobotCameraGUI>();
+        mixAndMatchPanel = AuxFunctions.FindObject(canvas, "MixAndMatchPanel");
+
+        toolbar = AuxFunctions.FindObject(canvas, "Toolbar");
+        changePanel = AuxFunctions.FindObject(canvas, "ChangePanel");
+        addPanel = AuxFunctions.FindObject(canvas, "AddPanel");
+
+        CheckControlPanel();
     }
-
-
 
     private void UpdateWindows()
     {
@@ -148,15 +171,7 @@ public class SimUI : MonoBehaviour
         UpdateDriverStationPanel();
     }
 
-
-    #region main button functions
-    /// <summary>
-    /// Resets the robot
-    /// </summary>
-    //public void PressReset()
-    //{
-    //    main.ResetRobot();
-    //}
+    #region change robot/field functions
     public void ChangeRobot()
     {
         GameObject panel = GameObject.Find("RobotListPanel");
@@ -168,11 +183,52 @@ public class SimUI : MonoBehaviour
             PlayerPrefs.SetString("simSelectedReplay", string.Empty);
             PlayerPrefs.SetString("simSelectedRobot", directory);
             PlayerPrefs.SetString("simSelectedRobotName", panel.GetComponent<ChangeRobotScrollable>().selectedEntry);
-            main.ChangeRobot(directory);
+            PlayerPrefs.SetInt("hasManipulator", 0); //0 is false, 1 is true
+            PlayerPrefs.Save();
+
+            if (changeAnalytics) //for analytics tracking
+            {
+                Analytics.CustomEvent("Changed Robot", new Dictionary<string, object>
+                {
+                });
+            }
+
+            robotCameraManager.DetachCamerasFromRobot(main.ActiveRobot);
+            sensorManager.RemoveSensorsFromRobot(main.ActiveRobot);
+
+            main.ChangeRobot(directory, false);
+
         }
         else
         {
             UserMessageManager.Dispatch("Robot directory not found!", 5);
+        }
+    }
+
+    /// <summary>
+    /// Changes the drive base, destroys old manipulator and creates new manipulator, sets wheels
+    /// </summary>
+    public void MaMChangeRobot(string robotDirectory, string manipulatorDirectory)
+    {
+        robotCameraManager.DetachCamerasFromRobot(main.ActiveRobot);
+        sensorManager.RemoveSensorsFromRobot(main.ActiveRobot);
+
+        //If the current robot has a manipulator, destroy the manipulator
+        if (main.ActiveRobot.RobotHasManipulator)
+        {
+            main.DeleteManipulatorNodes();
+        }
+
+        main.ChangeRobot(robotDirectory, true);
+
+        //If the new robot has a manipulator, load the manipulator
+        if (RobotTypeManager.HasManipulator)
+        {
+            main.LoadManipulator(manipulatorDirectory, main.ActiveRobot.gameObject);
+        }
+        else
+        {
+            main.ActiveRobot.RobotHasManipulator = false;
         }
     }
 
@@ -181,11 +237,13 @@ public class SimUI : MonoBehaviour
         if (changeRobotPanel.activeSelf)
         {
             changeRobotPanel.SetActive(false);
+            DynamicCamera.MovingEnabled = true;
         }
         else
         {
             EndOtherProcesses();
             changeRobotPanel.SetActive(true);
+            robotListPanel.SetActive(true);
         }
     }
 
@@ -202,11 +260,18 @@ public class SimUI : MonoBehaviour
             PlayerPrefs.SetString("simSelectedField", directory);
             PlayerPrefs.SetString("simSelectedFieldName", panel.GetComponent<ChangeFieldScrollable>().selectedEntry);
             PlayerPrefs.Save();
-            Application.LoadLevel("Scene");
-        }
-        else
-        {
-            UserMessageManager.Dispatch("Field directory not found!", 5);
+
+            if (changeAnalytics) //for analytics tracking
+            {
+                Analytics.CustomEvent("Changed Field", new Dictionary<string, object>
+                {
+                });              
+                    SceneManager.LoadScene("Scene");           
+            }
+            else
+            {
+                UserMessageManager.Dispatch("Field directory not found!", 5);
+            }
         }
     }
 
@@ -215,6 +280,7 @@ public class SimUI : MonoBehaviour
         if (changeFieldPanel.activeSelf)
         {
             changeFieldPanel.SetActive(false);
+            DynamicCamera.MovingEnabled = true;
         }
         else
         {
@@ -224,125 +290,48 @@ public class SimUI : MonoBehaviour
 
     }
 
-    public void ChooseResetMode(int i)
-    {
-        switch (i)
-        {
-            case 1:
-                main.BeginRobotReset();
-                main.EndRobotReset();
-                resetDropdown.GetComponent<Dropdown>().value = 0;
-                break;
-            case 2:
-                EndOtherProcesses();
-                main.IsResetting = true;
-                main.BeginRobotReset();
-                resetDropdown.GetComponent<Dropdown>().value = 0;
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Call this function whenever the user enters a new state (ex. selecting a new robot, using ruler function, orenting robot)
-    /// </summary>
-    public void EndOtherProcesses()
-    {
-        changeFieldPanel.SetActive(false);
-        changeRobotPanel.SetActive(false);
-        exitPanel.SetActive(false);
-        CloseOrientWindow();
-        main.IsResetting = false;   
-
-        dpm.EndProcesses();
-        toolkit.EndProcesses();
-    }
     #endregion
     #region camera button functions
-    //Camera Functions
-    public void SwitchCameraFreeroam()
+    /// <summary>
+    /// Toggles between different dynamic camera states
+    /// </summary>
+    /// <param name="joe"></param>
+    public void SwitchCameraView(int joe)
     {
-        camera.SwitchCameraState(0);
-    }
-
-    public void SwitchCameraOrbit()
-    {
-        camera.SwitchCameraState(1);
-    }
-
-    public void SwitchCameraDriverStation()
-    {
-        camera.SwitchCameraState(2);
-    }
-    #endregion
-    #region orient button functions
-
-    public void ToggleOrientWindow()
-    {
-        if (isOrienting)
+        switch (joe)
         {
-            isOrienting = false;
-            main.EndRobotReset();
+            case 1:
+                camera.SwitchCameraState(new DynamicCamera.DriverStationState(camera));
+                DynamicCamera.MovingEnabled = true;
+                break;
+            case 2:
+                camera.SwitchCameraState(new DynamicCamera.OrbitState(camera));
+                DynamicCamera.MovingEnabled = true;
+                break;
+            case 3:
+                camera.SwitchCameraState(new DynamicCamera.FreeroamState(camera));
+                DynamicCamera.MovingEnabled = true;
+                break;
+            case 4:
+                camera.SwitchCameraState(new DynamicCamera.OverviewState(camera));
+                DynamicCamera.MovingEnabled = true;
+                break;
         }
-        else
-        {
-            EndOtherProcesses();
-            isOrienting = true;
-            main.BeginRobotReset();
-        }
-        orientWindow.SetActive(isOrienting);
     }
-
-    public void OrientLeft()
-    {
-        main.RotateRobot(new Vector3(Mathf.PI * 0.25f, 0f, 0f));
-    }
-    public void OrientRight()
-    {
-        main.RotateRobot(new Vector3(-Mathf.PI * 0.25f, 0f, 0f));
-    }
-    public void OrientForward()
-    {
-        main.RotateRobot(new Vector3(0f, 0f, Mathf.PI * 0.25f));
-    }
-    public void OrientBackward()
-    {
-        main.RotateRobot(new Vector3(0f, 0f, -Mathf.PI * 0.25f));
-    }
-
-    public void DefaultOrientation()
-    {
-        main.ResetRobotOrientation();
-        orientWindow.SetActive(isOrienting = false);
-    }
-
-    public void SaveOrientation()
-    {
-        main.SaveRobotOrientation();
-        orientWindow.SetActive(isOrienting = false);
-    }
-
-    public void CloseOrientWindow()
-    {
-        isOrienting = false;
-        orientWindow.SetActive(isOrienting);
-        main.EndRobotReset();
-    }
-
-    #endregion
 
     /// <summary>
-    /// Pop reset instructions when main is in reset spawnpoint mode
+    /// Change camera tool tips
     /// </summary>
-    private void UpdateSpawnpointWindow()
+    public void CameraToolTips()
     {
-        if (main.IsResetting)
-        {
-            spawnpointWindow.SetActive(true);
-        }
-        else
-        {
-            spawnpointWindow.SetActive(false);
-        }
+        if (camera.cameraState.GetType().Equals(typeof(DynamicCamera.DriverStationState)))
+            camera.GetComponent<Text>().text = "Driver Station";
+        else if (camera.cameraState.GetType().Equals(typeof(DynamicCamera.FreeroamState)))
+            camera.GetComponent<Text>().text = "Freeroam";
+        else if (camera.cameraState.GetType().Equals(typeof(DynamicCamera.OrbitState)))
+            camera.GetComponent<Text>().text = "Orbit Robot";
+        else if (camera.cameraState.GetType().Equals(typeof(DynamicCamera.OverviewState)))
+            camera.GetComponent<Text>().text = "Overview";
     }
 
     /// <summary>
@@ -364,15 +353,18 @@ public class SimUI : MonoBehaviour
         }
     }
 
-
+    /// <summary>
+    /// Close freeroam camera tool tip
+    /// </summary>
     public void CloseFreeroamWindow()
     {
         freeroamCameraWindow.SetActive(false);
         freeroamWindowClosed = true;
     }
 
+
     /// <summary>
-    /// Activate driver station panel if the main camera is in driver station state
+    /// Activate driver station tool tips if the main camera is in driver station state
     /// </summary>
     private void UpdateDriverStationPanel()
     {
@@ -387,25 +379,207 @@ public class SimUI : MonoBehaviour
         oppositeSide = !oppositeSide;
         camera.SwitchCameraState(new DynamicCamera.DriverStationState(camera, oppositeSide));
     }
+    #endregion
+    #region orient button functions
+    public void OrientLeft()
+    {
+        main.RotateRobot(new Vector3(Mathf.PI * 0.25f, 0f, 0f));
+    }
+    public void OrientRight()
+    {
+        main.RotateRobot(new Vector3(-Mathf.PI * 0.25f, 0f, 0f));
+    }
+    public void OrientForward()
+    {
+        main.RotateRobot(new Vector3(0f, 0f, Mathf.PI * 0.25f));
+    }
+    public void OrientBackward()
+    {
+        main.RotateRobot(new Vector3(0f, 0f, -Mathf.PI * 0.25f));
+    }
 
+    public void DefaultOrientation()
+    {
+        main.ResetRobotOrientation();
+    }
+
+    public void SaveOrientation()
+    {
+        main.SaveRobotOrientation();
+    }
+
+    public void CancelOrientation()
+    {
+        main.CancelRobotOrientation();
+    }
+
+    #endregion
+    #region control panel functions
+    /// <summary>
+    /// Toggle the control panel ON/OFF based on the boolean passed.
+    /// </summary>
+    /// <param name="show"></param>
     public void ShowControlPanel(bool show)
     {
         if (show)
         {
             EndOtherProcesses();
             inputManagerPanel.SetActive(true);
+
+            Controls.Load();
+            GameObject.Find("SettingsMode").GetComponent<SettingsMode>().UpdateAllText();
         }
         else
         {
             inputManagerPanel.SetActive(false);
+            ToggleHotKeys(false);
+
+            if (Controls.CheckIfSaved())
+            {
+                checkSavePanel.SetActive(true);
+            }
         }
     }
 
+    /// <summary>
+    /// Toggle the control panel ON/OFF based on its current state
+    /// </summary>
     public void ShowControlPanel()
     {
         ShowControlPanel(!inputManagerPanel.activeSelf);
     }
 
+    /// <summary>
+    /// Checks the last state of the control panel. Defaults to OFF
+    /// unless the user leaves it on.
+    /// </summary>
+    public void CheckControlPanel()
+    {
+        if (PlayerPrefs.GetInt("isInputManagerPanel", 1) == 0)
+        {
+            inputManagerPanel.SetActive(false);
+        }
+        else
+        {
+            inputManagerPanel.SetActive(true);
+            PlayerPrefs.SetInt("isInputManagerPanel", 0);
+        }
+    }
+
+    /// <summary>
+    /// Open tutorial link
+    /// </summary>
+    public void OpenTutorialLink()
+    {
+        Application.OpenURL("http://bxd.autodesk.com/tutorials.html");
+        if (changeAnalytics) //for analytics tracking
+        {
+            Analytics.CustomEvent("Clicked Tutorial Link", new Dictionary<string, object>
+            {
+            });
+        }
+    }
+    /// <summary>
+    /// Activates analytics panel
+    /// </summary>
+    public void ToggleAnalyticsPanel()
+    {
+        if (analyticsPanel.activeSelf)
+        {
+            analyticsPanel.SetActive(false);
+        }
+        else
+        {
+            EndOtherProcesses();
+            analyticsPanel.SetActive(true);
+            inputManagerPanel.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// Toggles between meter and feet measurements
+    /// </summary>
+    public void ToggleUnitConversion()
+    {
+        if (canvas != null)
+        {
+            unitConversionSwitch = AuxFunctions.FindObject(canvas, "UnitConversionSwitch");
+            int i = (int)unitConversionSwitch.GetComponent<Slider>().value;
+            main.IsMetric = (i == 1 ? true : false);
+            PlayerPrefs.SetString("Measure", i == 1 ? "Metric" : "Imperial");
+            //Debug.Log("Metric: " + main.IsMetric);
+        }
+    }
+
+    /// <summary>
+    /// Toggle the hot key tool tips on/off based on the boolean passed in
+    /// </summary>
+    /// <param name="show"></param>
+    public void ToggleHotKeys(bool show)
+    {
+        hotKeyPanel.SetActive(show);
+        if (show)
+        {
+            hotKeyButton.GetComponentInChildren<Text>().text = "Hide Hot Keys";
+        }
+        else
+        {
+            hotKeyButton.GetComponentInChildren<Text>().text = "Display Hot Keys";
+        }
+    }
+
+    /// <summary>
+    ///Toggle the hot key tool tips on/off based on its current state
+    /// </summary>
+    public void ToggleHotKeys()
+    {
+        ToggleHotKeys(!hotKeyPanel.activeSelf);
+    }
+    #endregion
+    #region reset functions
+    /// <summary>
+    /// Pop reset instructions when main is in reset spawnpoint mode, enable orient robot at the same time
+    /// </summary>
+    private void UpdateSpawnpointWindow()
+    {
+        if (main.ActiveRobot.IsResetting)
+        {
+            spawnpointWindow.SetActive(true);
+            orientWindow.SetActive(true);
+        }
+        else
+        {
+            spawnpointWindow.SetActive(false);
+            orientWindow.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// Toggles between quick reset and reset spawnpoint
+    /// </summary>
+    /// <param name="i"></param>
+    public void ChooseResetMode(int i)
+    {
+        switch (i)
+        {
+            case 1:
+                main.BeginRobotReset();
+                main.EndRobotReset();
+                resetDropdown.GetComponent<Dropdown>().value = 0;
+                break;
+            case 2:
+                EndOtherProcesses();
+                main.BeginRobotReset();
+                resetDropdown.GetComponent<Dropdown>().value = 0;
+                break;
+        }
+    }
+    #endregion
+
+    /// <summary>
+    /// Exit to main menu window
+    /// </summary>
+    /// <param name="option"></param>
     public void MainMenuExit(string option)
     {
         EndOtherProcesses();
@@ -424,14 +598,63 @@ public class SimUI : MonoBehaviour
         }
     }
 
-    #region swap part
-    /// <summary>
-    /// Toggles the Driver Practice Mode window
-    /// </summary>
-    public void SwapToggleWindow()
+    public void CheckForSavedControls(string option)
     {
-        swapWindowOn = !swapWindowOn;
-        swapWindow.SetActive(swapWindowOn);
+        checkSavePanel.SetActive(false);
+
+        switch (option)
+        {
+            case "yes":
+                Controls.Save();
+                break;
+            case "no":
+                Controls.Load();
+                inputManagerPanel.SetActive(false);
+                break;
+            case "cancel":
+                inputManagerPanel.SetActive(true);
+                break;
+        }
+    }
+
+
+    /// <summary>
+    /// Call this function whenever the user enters a new state (ex. selecting a new robot, using ruler function, orenting robot)
+    /// </summary>
+    public void EndOtherProcesses()
+    {
+        changeFieldPanel.SetActive(false);
+        changeRobotPanel.SetActive(false);
+        exitPanel.SetActive(false);
+        mixAndMatchPanel.SetActive(false);
+        changePanel.SetActive(false);
+        addPanel.SetActive(false);
+        analyticsPanel.SetActive(false);
+        inputManagerPanel.SetActive(false);
+        ToggleHotKeys(false);
+
+        CancelOrientation();
+
+        dpm.EndProcesses();
+        toolkit.EndProcesses();
+        multiplayer.EndProcesses();
+        sensorManagerGUI.EndProcesses();
+        robotCameraGUI.EndProcesses();
+    }
+    /// <summary>
+    /// Toggle for analytics
+    /// </summary>
+    public void ToggleAnalytics(bool tAnalytics)
+    {
+        changeAnalytics = !changeAnalytics;
+    }
+
+    /// <summary>
+    /// Enters replay mode
+    /// </summary>
+    public void EnterReplayMode()
+    {
+        main.EnterReplayState();
     }
 
     public void TogglePanel(GameObject panel)
@@ -439,38 +662,37 @@ public class SimUI : MonoBehaviour
         if (panel.activeSelf == true)
         {
             panel.SetActive(false);
-        } else
+        }
+        else
         {
             panel.SetActive(true);
-        } 
-    }
-
-    public void PartToggleWindow(string Window)
-    {
-        List<GameObject> swapPanels = new List<GameObject> { wheelPanel, driveBasePanel, manipulatorPanel };
-        switch (Window)
-        {
-            case "wheel":
-                TogglePanel(wheelPanel);
-                driveBasePanel.SetActive(false);
-                manipulatorPanel.SetActive(false);
-                break;
-            case "driveBase":
-                TogglePanel(driveBasePanel);
-                wheelPanel.SetActive(false);
-                manipulatorPanel.SetActive(false);
-                break;
-            case "manipulator":
-                TogglePanel(manipulatorPanel);
-                driveBasePanel.SetActive(false);
-                wheelPanel.SetActive(false);
-                break;
-            default:
-                wheelPanel.SetActive(false);
-                driveBasePanel.SetActive(false);
-                manipulatorPanel.SetActive(false);
-                break;
         }
     }
-    #endregion
+
+    public void ToggleAddRobotPanel()
+    {
+        if (addPanel.activeSelf == true)
+        {
+            addPanel.SetActive(false);
+        }
+        else
+        {
+            addPanel.SetActive(true);
+            changePanel.SetActive(false);
+        }
+    }
+
+    public void ToggleChangePanel()
+    {
+        if (changePanel.activeSelf == true)
+        {
+            changePanel.SetActive(false);
+        }
+        else
+        {
+            changePanel.SetActive(true);
+            addPanel.SetActive(false);
+        }
+    }
 }
+

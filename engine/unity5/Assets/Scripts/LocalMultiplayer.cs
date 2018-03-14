@@ -4,6 +4,8 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using Assets.Scripts.FSM;
+using System.Linq;
+using UnityEngine.Analytics;
 
 /// <summary>
 /// Class for controlling the various aspects of local multiplayer
@@ -16,6 +18,8 @@ public class LocalMultiplayer : MonoBehaviour {
 
     private GameObject multiplayerWindow;
     private GameObject addRobotWindow;
+
+    private GameObject mixAndMatchPanel;
 
     private GameObject[] robotButtons = new GameObject[6];
     private int activeIndex = 0;
@@ -36,6 +40,7 @@ public class LocalMultiplayer : MonoBehaviour {
 
         simUI = StateMachine.Instance.gameObject.GetComponent<SimUI>();
         highlight = AuxFunctions.FindObject(canvas, "HighlightActiveRobot");
+        mixAndMatchPanel = AuxFunctions.FindObject(canvas, "MixAndMatchPanel");
     }
 	
 	/// <summary>
@@ -44,7 +49,7 @@ public class LocalMultiplayer : MonoBehaviour {
 	void Update () {
         if (mainState == null)
         {
-            mainState = ((MainState)StateMachine.Instance.CurrentState);
+            mainState = StateMachine.Instance.FindState<MainState>();
         }
     }
     
@@ -72,6 +77,7 @@ public class LocalMultiplayer : MonoBehaviour {
         {
             simUI.EndOtherProcesses();
             multiplayerWindow.SetActive(true);
+            UpdateUI();
         }
     }
 
@@ -89,8 +95,6 @@ public class LocalMultiplayer : MonoBehaviour {
 
             GetComponent<DriverPracticeMode>().ChangeActiveRobot(index);
         }
-
-
     }
 
     /// <summary>
@@ -98,18 +102,48 @@ public class LocalMultiplayer : MonoBehaviour {
     /// </summary>
     public void AddRobot()
     {
+        if (SimUI.changeAnalytics)
+        {
+            Analytics.CustomEvent("Added Robot", new Dictionary<string, object>
+            {
+            });
+        }
         GameObject panel = GameObject.Find("RobotListPanel");
         string directory = PlayerPrefs.GetString("RobotDirectory") + "\\" + panel.GetComponent<ChangeRobotScrollable>().selectedEntry;
         if (Directory.Exists(directory))
         {
             PlayerPrefs.SetString("simSelectedReplay", string.Empty);
-            mainState.LoadRobot(directory);
+            mainState.LoadRobot(directory, false);
         }
         else
         {
             UserMessageManager.Dispatch("Robot directory not found!", 5);
         }
         ToggleAddRobotWindow();
+        UpdateUI();
+
+        PlayerPrefs.SetInt("hasManipulator", 0); //0 for false, 1 for true
+    }
+
+    public void ToggleChangeRobotPanel()
+    {
+        simUI.ToggleChangeRobotPanel();
+        multiplayerWindow.SetActive(true);
+    }
+
+    /// <summary>
+    /// Adds a new robot to the field based on user selection in the popup robot list window
+    /// </summary>
+    public void AddMaMRobot(string baseDirectory, string manipulatorDirectory, bool hasManipulator)
+    {
+        if (hasManipulator)
+        {
+            mainState.LoadRobotWithManipulator(baseDirectory, manipulatorDirectory);
+        } else
+        {
+            mainState.LoadRobot(baseDirectory, true);
+        }
+
         UpdateUI();
     }
 
@@ -119,7 +153,7 @@ public class LocalMultiplayer : MonoBehaviour {
     public void RemoveRobot()
     {
         mainState.RemoveRobot(activeIndex);
-        activeIndex = mainState.SpawnedRobots.IndexOf(mainState.activeRobot);
+        activeIndex = mainState.SpawnedRobots.IndexOf(mainState.ActiveRobot);
         GetComponent<DriverPracticeMode>().ChangeActiveRobot(activeIndex);
         UpdateUI();
     }
@@ -132,13 +166,13 @@ public class LocalMultiplayer : MonoBehaviour {
         if (addRobotWindow.activeSelf)
         {
             addRobotWindow.SetActive(false);
+            DynamicCamera.MovingEnabled = true;
         }
         else
         {
-            simUI.EndOtherProcesses();
             addRobotWindow.SetActive(true);
         }
-    }   
+    }
 
     /// <summary>
     /// Updates the multiplayer window to reflect changes in indexes, controls, etc.
@@ -163,8 +197,10 @@ public class LocalMultiplayer : MonoBehaviour {
 
         highlight.transform.position = robotButtons[activeIndex].transform.position;
 
-        GameObject.Find("ActiveRobotText").GetComponent<Text>().text = "Robot: " + mainState.SpawnedRobots[activeIndex].RobotName;
-        GameObject.Find("ControlIndexText").GetComponent<Text>().text = "Control Index: " + (mainState.SpawnedRobots[activeIndex].controlIndex + 1);
+        Resources.FindObjectsOfTypeAll<GameObject>().Where(x => x.name.Equals("ActiveRobotText")).First().GetComponent<Text>().text = "Robot: " + mainState.SpawnedRobots[activeIndex].RobotName;
+        Resources.FindObjectsOfTypeAll<GameObject>().Where(x => x.name.Equals("ControlIndexDropdown")).First().GetComponent<Dropdown>().value = mainState.ActiveRobot.ControlIndex;
+        // GameObject.Find("ActiveRobotText").GetComponent<Text>().text = "Robot: " + mainState.SpawnedRobots[activeIndex].RobotName;
+        //GameObject.Find("ControlIndexDropdown").GetComponent<Dropdown>().value = mainState.activeRobot.controlIndex;
     }
 
     /// <summary>
@@ -173,5 +209,19 @@ public class LocalMultiplayer : MonoBehaviour {
     public void HideTooltip()
     {
         GameObject.Find("MultiplayerTooltip").SetActive(false);
+    }
+    
+    /// <summary>
+    /// Changes the control index of the active robot
+    /// </summary>
+    public void ChangeControlIndex(int index)
+    {
+        mainState.ChangeControlIndex(index);
+        UpdateUI();
+    }
+
+    public void EndProcesses()
+    {
+        if (multiplayerWindow.activeSelf) ToggleMultiplayerWindow();
     }
 }

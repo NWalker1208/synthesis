@@ -9,8 +9,9 @@ using Assets.Scripts.FEA;
 public class UnityFieldDefinition : FieldDefinition
 {
     public GameObject unityObject;
-    //private const float COLLISION_MARGIN = 0.1f;
-    private const float FRICTION_SCALE = 0.02f;
+    private const float CollisionMargin = 0.01f;
+    private const float FrictionScale = 0.02f;
+    private const float RollingFrictionScale = 0.0025f;
 
     public UnityFieldDefinition(Guid guid, string name)
         : base(guid, name)
@@ -19,8 +20,7 @@ public class UnityFieldDefinition : FieldDefinition
 
     public void CreateTransform(Transform root)
     {
-        unityObject = new GameObject();
-        unityObject.name = NodeGroup.NodeGroupID;
+        unityObject = root.gameObject;
     }
 
     public bool CreateMesh(string filePath)
@@ -132,8 +132,8 @@ public class UnityFieldDefinition : FieldDefinition
                             subObject.transform.rotation = meshObject.transform.rotation;
 
                             BConvexHullShape hullshape = subObject.AddComponent<BConvexHullShape>();
-                            hullshape.HullMesh = AuxFunctions.GenerateCollisionMesh(meshObject.GetComponent<MeshFilter>().mesh, dummyMeshCollider.sharedMesh.bounds.center);
-                            hullshape.GetCollisionShape().Margin = 0f;
+                            hullshape.HullMesh = AuxFunctions.GenerateCollisionMesh(meshObject.GetComponent<MeshFilter>().mesh, dummyMeshCollider.sharedMesh.bounds.center, 0f/*CollisionMargin*/);
+                            hullshape.GetCollisionShape().Margin = CollisionMargin;
 
                             //subObject.AddComponent<MouseListener>();
                             UnityEngine.Object.Destroy(dummyMeshCollider);
@@ -145,15 +145,14 @@ public class UnityFieldDefinition : FieldDefinition
 
                             BBvhTriangleMeshShape meshShape = subObject.AddComponent<BBvhTriangleMeshShape>();
                             meshShape.HullMesh = meshObject.GetComponent<MeshFilter>().mesh.GetScaledCopy(-1f, 1f, 1f);
-                            meshShape.GetCollisionShape().Margin = 0f;
+                            meshShape.GetCollisionShape().Margin = CollisionMargin;
                         }
-
-                        // TODO: Find a way to implement embedded margins. See https://www.bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=9&t=2358
                         break;
                 }
 
                 BRigidBody rb = subObject.AddComponent<BRigidBody>();
-                rb.friction = currentPropertySet.Friction * FRICTION_SCALE;
+                rb.friction = currentPropertySet.Friction * FrictionScale;
+                rb.rollingFriction = currentPropertySet.Friction * RollingFrictionScale;
                 rb.mass = currentPropertySet.Mass;
 
                 if (currentPropertySet.Mass == 0)

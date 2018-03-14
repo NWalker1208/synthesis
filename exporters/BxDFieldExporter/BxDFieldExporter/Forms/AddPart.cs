@@ -1,13 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using BxDFieldExporter;
 using Inventor;
 
 namespace BxDFieldExporter
@@ -17,13 +9,13 @@ namespace BxDFieldExporter
     {
         //Used to access StandardAddInServer's exposed API
         private Inventor.Application mApplication;
-        private AutomationInterface mAddInInterface;
+        private IAutomationInterface mAddInInterface;
 
         public AddPart()
         {
-            this.Location = new System.Drawing.Point(450, 350);
+            Location = new System.Drawing.Point(450, 350);
             InitializeComponent();
-            this.TopMost = true;
+            TopMost = true;
 
             //Used to access StandardAddInServer's exposed API
             try
@@ -44,42 +36,66 @@ namespace BxDFieldExporter
                 //Looks for our DemoAddin CLSID;
                 if (oAddIn.ClassIdString == "{E50BE244-9F7B-4B94-8F87-8224FABA8CA1}")
                 {
-                    
+
                     //Calls Automation property    
-                    mAddInInterface = (AutomationInterface)oAddIn.Automation;
+                    mAddInInterface = (IAutomationInterface)oAddIn.Automation;
                 }
             }
         }
-
+        /// <summary>
+        /// Closes the form and adds the last selected model to the selected component
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void OKButton_OnClick(object sender, EventArgs e)
         {
-            mAddInInterface.setRunOnce(false);
-            this.Close();
+            mAddInInterface.SetDone(true);
+            StandardAddInServer.task.TrySetResult(true);
+            Close();
         }
-
+        /// <summary>
+        /// Closes the form and doesn't add the last selected model to the selected component
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void CancelButton_onClick(object sender, EventArgs e)
         {
-            mAddInInterface.setCancel(true);
-            mAddInInterface.setRunOnce(false);
-            this.Close();
+            Close();
         }
 
-        private void SelectPartsLabel_onClick(object sender, EventArgs e)
+        /// <summary>
+        /// Checks for keyinput and closes the form with or without saving the model to a component depending on the entered key
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <param name="keyData"></param>
+        /// <returns></returns>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            this.Close();
+            if (keyData == Keys.Escape)
+            {
+                Close();
+            }
+            else if (keyData == Keys.Enter)
+            {
+                OKButton_OnClick(null, null);
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+        /// <summary>
+        /// Leaves the form open and adds the last selected model to the selected component
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ApplyButton_Click(object sender, EventArgs e)
+        {
+            StandardAddInServer.task.TrySetResult(true);
         }
 
-        private void CancelButton_onClick(object sender, MouseEventArgs e)
+        private void AddPart_FormClosing(object sender, FormClosingEventArgs e)
         {
-            mAddInInterface.setCancel(true);
-            mAddInInterface.setRunOnce(false);
-            this.Close();
-        }
-
-        private void CancelButton_onClick(object sender, FormClosedEventArgs e)
-        {
-            mAddInInterface.setCancel(true);
-            mAddInInterface.setRunOnce(false);
+            mAddInInterface.SetCancel(true);
+            StandardAddInServer.task.TrySetResult(true);
         }
     }
 }
